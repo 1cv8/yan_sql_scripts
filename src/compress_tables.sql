@@ -3,6 +3,7 @@ DECLARE @DBName VARCHAR(300) = '';
 DECLARE @TableName varchar(400) = '';
 
 DECLARE @SQLString NVARCHAR(MAX) = '';
+DECLARE @Compressed int;
 
 IF OBJECT_ID('tempdb..##ts_compress') IS NOT NULL
 	DROP TABLE ##ts_compress;
@@ -15,7 +16,7 @@ FOR (
 			[name]
 		FROM sys.databases
 		WHERE
-			[name] not in ('master','tempdb','model','msdb')
+			[name] not in ('master','tempdb','model','msdb', 'PerfmonData')
 			AND [state_desc] = 'ONLINE'
 		ORDER BY
 			[name]
@@ -28,6 +29,8 @@ FETCH NEXT FROM DBCursor INTO @DBName;
 WHILE @@FETCH_STATUS = 0
     BEGIN
 		
+		SET @Compressed = 0;
+
 		SET @SQLString =
 		'USE [' + @DBName + ']
 			SELECT
@@ -46,7 +49,7 @@ WHILE @@FETCH_STATUS = 0
 				)
 				AND o.[type] IN (''U'', ''V'') -- user types'
 
-		PRINT @DBName
+		PRINT @DBName + ':'
 		--PRINT @SQLString
 		EXEC (@SQLString)
 
@@ -83,10 +86,21 @@ WHILE @@FETCH_STATUS = 0
 			
 			--PRINT '   tn:' + @TableName;
 			
+			SET @Compressed = 1;
+
 			-- Следующий элемент цикла по таблицам
 			FETCH NEXT FROM TableCursor INTO @TableName
 			
 		END
+
+		-- делаем шринк базы — возвращаем свободное место на диск
+
+		IF @Compressed = 1 
+		Begin
+			print 'shrinking ...'
+			SET @SQLString = 'DBCC SHRINKDATABASE('+ @DBName + ', 5)';
+			EXEC (@SQLString)
+		end;
 
 		CLOSE TableCursor;
 		DEALLOCATE TableCursor;
