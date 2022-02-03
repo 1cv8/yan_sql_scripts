@@ -5,6 +5,9 @@ DECLARE @TableName varchar(400) = '';
 DECLARE @SQLString NVARCHAR(MAX) = '';
 DECLARE @Compressed int;
 
+-- тут вилку хочу по использованию параметров
+--SELECT SERVERPROPERTY ('edition')
+
 IF OBJECT_ID('tempdb..##ts_compress') IS NOT NULL
 	DROP TABLE ##ts_compress;
 
